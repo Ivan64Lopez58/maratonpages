@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Maratón de Código</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.10/codemirror.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.10/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.10/mode/clike/clike.min.js"></script>
+</head>
+<body>
+    <button onclick="borrarConcursantes()">Borrar concursantes</button>
+  <div class="container">
+    <h2>🏁 Maratón de Programación: Programación Básica</h2>
+    <div id="cronometro"></div>
+
+    <!-- Nombre del alumno -->
+    <div class="form-group">
+      <label for="username">👤 Tu nombre:</label>
+      <input type="text" id="username" placeholder="Ej. Juan Pérez" />
+    </div>
+
+    <!-- Código del alumno -->
+    <div class="form-group">
+      <label for="alumnoID">🆔 Código del alumno:</label>
+      <input type="text" id="alumnoID" placeholder="Ej. 2025001" />
+    </div>
+
+    <!-- Selección del ejercicio -->
+    <div class="form-group">
+      <label for="ejercicio">🧠 Selecciona un ejercicio:</label>
+      <select id="ejercicio" onchange="mostrarDescripcion()">
+        <option value="">Selecciona un ejercicio</option>
+        <option value="collatz">🧩 Ciclo de Collatz</option>
+        <option value="recuperacion">🔡 Recuperación de Palabra Codificada</option>
+        <option value="binpacking">♻️ Bin Packing Vidrio</option>
+        <option value="fizzbuzz">🔁 Fizz Buzz personalizable</option>
+        <option value="opuesto_circular">🔄 Persona Opuesta en Círculo</option>
+      </select>
+    </div>
+
+    <!-- Descripción del ejercicio -->
+    <div id="descripcion-ejercicio"></div>
+
+    <!-- Editor de código -->
+    <div class="form-group">
+      <label for="code">✍️ Tu solución en C++:</label>
+      <div id="editor-container">
+        <textarea id="code">// Escribe tu código aquí</textarea>
+      </div>
+    </div>
+
+    <!-- Botón de evaluación -->
+    <button onclick="evaluarCodigo()">🚀 Evaluar</button>
+
+    <!-- Resultados -->
+    <section id="output-section">
+      <h3>💬 Resultado de la Evaluación</h3>
+      <div id="output"></div>
+    </section>
+
+    <!-- Ranking -->
+    <section id="ranking-section">
+      <h3>🏆 Ranking</h3>
+      <div id="ranking"></div>
+    </section>
+
+    <section id="tabla-acumulada-section">
+  <h3>📊 Puntaje Acumulado por Alumno</h3>
+  <div id="tabla-acumulada"></div>
+</section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
