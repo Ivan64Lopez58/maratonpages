@@ -427,6 +427,7 @@ async function evaluarCodigo() {
     }
 
     mostrarTablaAcumulada();
+    cargarTablaAcumuladaDesdeFirebase();
 
 
 }
@@ -496,8 +497,6 @@ function borrarConcursantes() {
 
 function mostrarTablaAcumulada() {
   const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
-
-  // Agrupar y acumular puntajes por estudiante
   const acumulado = {};
 
   ranking.forEach(r => {
@@ -513,8 +512,10 @@ function mostrarTablaAcumulada() {
     acumulado[r.codigoAlumno].ejerciciosResueltos += 1;
   });
 
-  // Convertir a array y ordenar por puntaje total descendente
   const listaOrdenada = Object.values(acumulado).sort((a, b) => b.puntajeTotal - a.puntajeTotal);
+
+  // Guardar en Firestore
+  listaOrdenada.forEach(guardarRankingAcumuladoFirestore);
 
   const filas = listaOrdenada.map((r, i) => `
     <tr>
@@ -546,5 +547,64 @@ function mostrarTablaAcumulada() {
 }
 
 
+async function guardarRankingAcumuladoFirestore(alumno) {
+  const docRef = db.collection("rankingAcumulado").doc(alumno.codigoAlumno);
+  await docRef.set(alumno); // sobrescribe o crea el documento
+}
 
-mostrarRanking();
+async function cargarTablaAcumuladaDesdeFirebase() {
+  try {
+    const snapshot = await db.collection("rankingAcumulado").get(); // CORREGIDO
+    const lista = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      lista.push({
+        nombre: data.nombre,
+        codigoAlumno: data.codigoAlumno,
+        ejerciciosResueltos: data.ejerciciosResueltos,
+        puntajeTotal: data.puntajeTotal
+      });
+    });
+
+    lista.sort((a, b) => b.puntajeTotal - a.puntajeTotal);
+
+    const filas = lista.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${r.nombre}</td>
+        <td>${r.codigoAlumno}</td>
+        <td>${r.ejerciciosResueltos}</td>
+        <td>${r.puntajeTotal}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("tabla-acumulada").innerHTML = `
+      <h3>🏆 Ranking Acumulado</h3>
+      <table border="1" cellpadding="5">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Código</th>
+            <th>Ejercicios resueltos</th>
+            <th>Puntaje total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filas}
+        </tbody>
+      </table>
+    `;
+
+  } catch (error) {
+    console.error("Error al cargar tabla acumulada desde Firebase:", error);
+  }
+}
+
+
+
+window.onload = () => {
+//  cargarTablaAcumuladaDesdeFirebase();
+  mostrarRanking(); // si quieres mostrar el ranking local también
+};
