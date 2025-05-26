@@ -1,4 +1,4 @@
-// ------------------ CONFIGURACIÓN DEL EDITOR ------------------
+//---- CONFIGURACIÓN DEL EDITOR ------------------
 
 const editor = CodeMirror.fromTextArea(document.getElementById("code"), {
   mode: "text/x-c++src",
@@ -434,60 +434,77 @@ async function evaluarCodigo() {
 
 // ------------------ GUARDAR Y MOSTRAR RANKING ------------------
 
-function guardarRanking(nombre, codigoAlumno, ejercicio, estado, similitud) {
-  const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
-
+async function guardarRanking(nombre, codigoAlumno, ejercicio, estado, similitud) {
   const tiempoFin = new Date();
   const tiempoMs = tiempoFin - tiempoInicio;
   const tiempoFormato = new Date(tiempoMs).toISOString().substr(11, 8);
 
-  ranking.push({
+  const data = {
     nombre,
     codigoAlumno,
     ejercicio,
     estado,
     similitud,
     fechaInicio: tiempoInicio.toLocaleString(),
-    tiempo: tiempoFormato
-  });
+    tiempo: tiempoFormato,
+    timestamp: firebase.firestore.Timestamp.now()
+  };
 
-  localStorage.setItem("ranking", JSON.stringify(ranking));
+  try {
+    await db
+      .collection("ranking")
+      .add(data); // crea un nuevo documento por envío
+    console.log("✔ Resultado guardado en Firebase.");
+  } catch (error) {
+    console.error("❌ Error guardando resultado:", error);
+  }
 }
 
-function mostrarRanking() {
-  const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
+async function mostrarRanking() {
+  try {
+    const snapshot = await db
+      .collection("ranking")
+      .orderBy("timestamp", "desc")
+      .get();
 
-  const filas = ranking.map((r, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${r.nombre}</td>
-      <td>${r.codigoAlumno}</td>
-      <td>${r.ejercicio}</td>
-      <td>${r.estado}</td>
-      <td>${r.similitud ?? '—'}</td>
-      <td>${r.fechaInicio}</td>
-      <td>${r.tiempo}</td>
-    </tr>
-  `).join("");
-
-  document.getElementById("ranking").innerHTML = `
-    <table border="1" cellpadding="5">
-      <thead>
+    const filas = snapshot.docs.map((doc, i) => {
+      const r = doc.data();
+      return `
         <tr>
-          <th>#</th>
-          <th>Nombre</th>
-          <th>Código</th>
-          <th>Ejercicio</th>
-          <th>Estado</th>
-          <th>Puntaje</th>
-          <th>Fecha/Hora inicio</th>
-          <th>Tiempo usado</th>
+          <td>${i + 1}</td>
+          <td>${r.nombre}</td>
+          <td>${r.codigoAlumno}</td>
+          <td>${r.ejercicio}</td>
+          <td>${r.estado}</td>
+          <td>${r.similitud ?? '—'}</td>
+          <td>${r.fechaInicio}</td>
+          <td>${r.tiempo}</td>
         </tr>
-      </thead>
-      <tbody>${filas}</tbody>
-    </table>
-  `;
+      `;
+    }).join("");
+
+    document.getElementById("ranking").innerHTML = `
+      <table border="1" cellpadding="5">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Código</th>
+            <th>Ejercicio</th>
+            <th>Estado</th>
+            <th>Puntaje</th>
+            <th>Fecha/Hora inicio</th>
+            <th>Tiempo usado</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch (error) {
+    console.error("❌ Error al mostrar ranking desde Firebase:", error);
+  }
 }
+
 
 function borrarConcursantes() {
   localStorage.removeItem("ranking");
@@ -495,55 +512,59 @@ function borrarConcursantes() {
 }
 
 
-function mostrarTablaAcumulada() {
-  const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
-  const acumulado = {};
+async function mostrarTablaAcumulada() {
+  try {
+    const snapshot = await db.collection("ranking").get();
 
-  ranking.forEach(r => {
-    if (!acumulado[r.codigoAlumno]) {
-      acumulado[r.codigoAlumno] = {
-        nombre: r.nombre,
-        codigoAlumno: r.codigoAlumno,
-        puntajeTotal: 0,
-        ejerciciosResueltos: 0
-      };
-    }
-    acumulado[r.codigoAlumno].puntajeTotal += (r.similitud || 0);
-    acumulado[r.codigoAlumno].ejerciciosResueltos += 1;
-  });
+    const acumulado = {};
 
-  const listaOrdenada = Object.values(acumulado).sort((a, b) => b.puntajeTotal - a.puntajeTotal);
+    snapshot.forEach(doc => {
+      const r = doc.data();
+      if (!acumulado[r.codigoAlumno]) {
+        acumulado[r.codigoAlumno] = {
+          nombre: r.nombre,
+          codigoAlumno: r.codigoAlumno,
+          puntajeTotal: 0,
+          ejerciciosResueltos: 0
+        };
+      }
+      acumulado[r.codigoAlumno].puntajeTotal += (r.similitud || 0);
+      acumulado[r.codigoAlumno].ejerciciosResueltos += 1;
+    });
 
-  // Guardar en Firestore
-  listaOrdenada.forEach(guardarRankingAcumuladoFirestore);
+    const listaOrdenada = Object.values(acumulado).sort((a, b) => b.puntajeTotal - a.puntajeTotal);
 
-  const filas = listaOrdenada.map((r, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${r.nombre}</td>
-      <td>${r.codigoAlumno}</td>
-      <td>${r.ejerciciosResueltos}</td>
-      <td>${r.puntajeTotal}</td>
-    </tr>
-  `).join("");
+    // (opcional) Guardar también en otra colección
+    listaOrdenada.forEach(guardarRankingAcumuladoFirestore);
 
-  document.getElementById("tabla-acumulada").innerHTML = `
-    <h3>🏆 Ranking Acumulado</h3>
-    <table border="1" cellpadding="5">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Nombre</th>
-          <th>Código</th>
-          <th>Ejercicios resueltos</th>
-          <th>Puntaje total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${filas}
-      </tbody>
-    </table>
-  `;
+    const filas = listaOrdenada.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${r.nombre}</td>
+        <td>${r.codigoAlumno}</td>
+        <td>${r.ejerciciosResueltos}</td>
+        <td>${r.puntajeTotal}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("tabla-acumulada").innerHTML = `
+      <h3>🏆 Ranking Acumulado</h3>
+      <table border="1" cellpadding="5">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Código</th>
+            <th>Ejercicios resueltos</th>
+            <th>Puntaje total</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  } catch (error) {
+    console.error("❌ Error al mostrar acumulado desde Firebase:", error);
+  }
 }
 
 
