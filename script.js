@@ -426,6 +426,7 @@ async function evaluarCodigo() {
     combo.remove(combo.selectedIndex);
     }
 
+    mostrarTablaAcumulada();
     cargarTablaAcumuladaDesdeFirebase();
 
 
@@ -493,6 +494,57 @@ function borrarConcursantes() {
   mostrarRanking();
 }
 
+
+function mostrarTablaAcumulada() {
+  const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
+  const acumulado = {};
+
+  ranking.forEach(r => {
+    if (!acumulado[r.codigoAlumno]) {
+      acumulado[r.codigoAlumno] = {
+        nombre: r.nombre,
+        codigoAlumno: r.codigoAlumno,
+        puntajeTotal: 0,
+        ejerciciosResueltos: 0
+      };
+    }
+    acumulado[r.codigoAlumno].puntajeTotal += (r.similitud || 0);
+    acumulado[r.codigoAlumno].ejerciciosResueltos += 1;
+  });
+
+  const listaOrdenada = Object.values(acumulado).sort((a, b) => b.puntajeTotal - a.puntajeTotal);
+
+  // Guardar en Firestore
+  listaOrdenada.forEach(guardarRankingAcumuladoFirestore);
+
+  const filas = listaOrdenada.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.nombre}</td>
+      <td>${r.codigoAlumno}</td>
+      <td>${r.ejerciciosResueltos}</td>
+      <td>${r.puntajeTotal}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("tabla-acumulada").innerHTML = `
+    <h3>🏆 Ranking Acumulado</h3>
+    <table border="1" cellpadding="5">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Código</th>
+          <th>Ejercicios resueltos</th>
+          <th>Puntaje total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filas}
+      </tbody>
+    </table>
+  `;
+}
 
 
 async function guardarRankingAcumuladoFirestore(alumno) {
