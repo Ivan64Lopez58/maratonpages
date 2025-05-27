@@ -409,9 +409,8 @@ async function evaluarCodigo() {
     document.getElementById("output").innerText = output;
 
     const estado = passed ? "Correcto" : "Incorrecto";
-    guardarRanking(nombre, codigoAlumno, clave, estado, similitud);
-    mostrarRanking();
-
+    //guardarRanking(nombre, codigoAlumno, clave, estado, similitud);
+   
   } catch (err) {
     document.getElementById("output").innerText = "❌ Error al evaluar código: " + err.message;
   }
