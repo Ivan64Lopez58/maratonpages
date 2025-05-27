@@ -348,6 +348,7 @@ function levenshtein(a, b) {
 // ------------------ EVALUAR CÓDIGO ------------------
 
 async function evaluarCodigo() {
+  
   const nombre = document.getElementById("username").value.trim();
   const codigoAlumno = document.getElementById("alumnoID").value.trim();
   const codigo = editor.getValue();
@@ -402,8 +403,9 @@ async function evaluarCodigo() {
     combo.remove(combo.selectedIndex);
   }
 
-  mostrarTablaAcumulada();
+
   cargarTablaAcumuladaDesdeFirebase();
+  mostrarTablaAcumulada();
 }
 
 
