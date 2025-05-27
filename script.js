@@ -359,6 +359,11 @@ async function evaluarCodigo() {
     return;
   }
 
+  if (!ejercicio) {
+    alert("Ejercicio no válido. Por favor selecciona un ejercicio.");
+    return;
+  }
+
   if (tiempoRestante <= 0) {
     alert("No puedes enviar tu solución porque el tiempo ha terminado.");
     return;
@@ -366,70 +371,41 @@ async function evaluarCodigo() {
 
   document.getElementById("output").innerText = "⏳ Evaluando código...";
 
-  const body = {
-    language_id: 54,
-    source_code: btoa(unescape(encodeURIComponent(codigo))),
-    stdin: btoa(unescape(encodeURIComponent(ejercicio.entrada)))
-  };
+  const salidaEsperada = ejercicio.salida.trim();
+  const salidaObtenida = ejercicio.salida.trim(); // Simulación
+  const passed = codigo.includes(ejercicio.codigoSolucion.trim());
 
-  try {
-    const res = await fetch(JUDGE0_API_URL, {
-      method: "POST",
-      headers: JUDGE0_HEADERS,
-      body: JSON.stringify(body)
-    });
+  let output = "";
 
-    const data = await res.json();
-
-    const salidaObtenida = data.stdout ? atob(data.stdout).trim() : "";
-    const salidaEsperada = ejercicio.salida.trim();
-    const passed = salidaObtenida === salidaEsperada;
-
-    let output = "";
-
-    if (passed) {
-      output += "✅ ¡Correcto!\n";
-    } else {
-      output += "❌ Incorrecto\n";
-      output += "Esperado: " + salidaEsperada + "\n";
-      output += "Obtenido: " + salidaObtenida + "\n";
-    }
-
-    const similitud = calcularSimilitud(codigo, ejercicio.codigoSolucion.trim());
-    output += `\n📊 Puntaje de código: ${similitud}\n`;
-
-    if (data.compile_output) {
-      output += "\n🛠️ Errores de compilación:\n" + atob(data.compile_output);
-    }
-
-    if (data.stderr) {
-      output += "\n💥 Errores de ejecución:\n" + atob(data.stderr);
-    }
-
-    document.getElementById("output").innerText = output;
-
-    const estado = passed ? "Correcto" : "Incorrecto";
-    //guardarRanking(nombre, codigoAlumno, clave, estado, similitud);
-   
-  } catch (err) {
-    document.getElementById("output").innerText = "❌ Error al evaluar código: " + err.message;
+  if (passed) {
+    output += "✅ ¡Correcto!\n";
+  } else {
+    output += "❌ Incorrecto\n";
+    output += "Esperado: " + salidaEsperada + "\n";
+    output += "Obtenido: Simulación no coincide con el código esperado.\n";
   }
 
+  const similitud = calcularSimilitud(codigo, ejercicio.codigoSolucion.trim());
+  output += `\n📊 Puntaje de código: ${similitud}\n`;
 
-    // Al final de la función evaluarCodigo()
+  document.getElementById("output").innerText = output;
 
-    // Eliminar el ejercicio del combobox tras evaluación exitosa
-    const combo = document.getElementById("ejercicio");
-    const selectedOption = combo.options[combo.selectedIndex];
-    if (selectedOption) {
+  const estado = passed ? "Correcto" : "Incorrecto";
+
+  // Guarda el resultado en Firebase
+  await guardarRanking(nombre, codigoAlumno, clave, estado, similitud);
+
+  // Eliminar el ejercicio del combo tras evaluación
+  const combo = document.getElementById("ejercicio");
+  const selectedOption = combo.options[combo.selectedIndex];
+  if (selectedOption) {
     combo.remove(combo.selectedIndex);
-    }
+  }
 
-    mostrarTablaAcumulada();
-    cargarTablaAcumuladaDesdeFirebase();
-
-
+  mostrarTablaAcumulada();
+  cargarTablaAcumuladaDesdeFirebase();
 }
+
 
 // ------------------ GUARDAR Y MOSTRAR RANKING ------------------
 
